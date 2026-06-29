@@ -1,0 +1,16 @@
+name: CococraftTweaks
+version: 1.0.0
+main: net.cococraft.tweaks.CococraftTweaksPlugin
+api-version: '1.20'
+author: Cococraft
+depend: [ProtocolLib]
+description: Fondo de cofres vanilla + comando al abrir la pantalla de avances.
+commands:
+  cococrafttweaks:
+    description: Recarga la config de CococraftTweaks.
+    usage: /cococrafttweaks reload
+    aliases: [cct]
+permissions:
+  cococrafttweaks.admin:
+    description: Permite recargar la config.
+    default: op
