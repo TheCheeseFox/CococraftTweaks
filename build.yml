@@ -1,0 +1,70 @@
+name: Build CococraftTweaks
+
+# Se dispara al hacer push a la rama principal (ajusta el nombre si la tuya
+# es "master" u otra), ignorando cambios solo de documentacion. Tambien se
+# puede lanzar a mano desde la pestana "Actions".
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # JDK 25 (Temurin) para que coincida con el runtime de tu servidor y con
+      # el paper-api 26.1.x. "cache: maven" acelera builds siguientes.
+      - name: Set up JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      # DeluxeMenus no esta en un repo Maven publico estable, asi que lo
+      # descargamos YA COMPILADO de Hangar (PaperMC) y lo instalamos en el
+      # Maven local del runner. Mismo patron que usas con GravesX en CocoGraves.
+      # La API que usamos (Menu.getMenuByName / openMenu) es estable entre
+      # versiones recientes, asi que basta con una version reciente cualquiera.
+      - name: Download & install DeluxeMenus dependency
+        run: |
+          set -e
+
+          # Pon aqui la version de DeluxeMenus de tu servidor (/version DeluxeMenus).
+          DM_VERSION="1.14.0"
+
+          echo "== Descargando DeluxeMenus $DM_VERSION desde Hangar =="
+          curl -fSL \
+            -H "User-Agent: CococraftTweaks-CI" \
+            -o deluxemenus.jar \
+            "https://hangar.papermc.io/api/v1/projects/DeluxeMenus/versions/${DM_VERSION}/PAPER/download"
+
+          echo "== Verificando que se descargo un .jar valido =="
+          file deluxemenus.jar
+          # Un .jar es un zip; si el endpoint devolvio HTML de error, esto falla.
+          unzip -l deluxemenus.jar > /dev/null
+
+          echo "== Instalando DeluxeMenus en el Maven local del runner =="
+          mvn -B -q install:install-file \
+            -Dfile=deluxemenus.jar \
+            -DgroupId=com.extendedclip.deluxemenus \
+            -DartifactId=DeluxeMenus \
+            -Dversion="${DM_VERSION}" \
+            -Dpackaging=jar
+
+      - name: Build with Maven
+        run: mvn -B clean package
+
+      # El jar sale como artifact del run; lo descargas desde la pagina de Actions.
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CococraftTweaks
+          path: target/CococraftTweaks.jar
+          if-no-files-found: error
