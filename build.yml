@@ -63,7 +63,7 @@ jobs:
             -Dfile=deluxemenus.jar \
             -DgroupId=com.extendedclip.deluxemenus \
             -DartifactId=DeluxeMenus \
-            -Dversion=1.14.0 \
+            -Dversion=1.14.1 \
             -Dpackaging=jar
  
       - name: Build with Maven
