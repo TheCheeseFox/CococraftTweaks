@@ -1,0 +1,17 @@
+name: CococraftTweaks
+version: 1.1.0
+main: net.cococraft.tweaks.CococraftTweaksPlugin
+api-version: '1.20'
+author: Cococraft
+depend: [ProtocolLib]
+softdepend: [DeluxeMenus]
+description: Fondo de contenedores vanilla + abre un menu de DeluxeMenus al pulsar L.
+commands:
+  cococrafttweaks:
+    description: Recarga la config de CococraftTweaks.
+    usage: /cococrafttweaks reload
+    aliases: [cct]
+permissions:
+  cococrafttweaks.admin:
+    description: Permite recargar la config.
+    default: op

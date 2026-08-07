@@ -1,0 +1,21 @@
+# ===== CococraftTweaks - configuracion =====
+
+# Fondos para los contenedores vanilla.
+# Pega el CARACTER del glyph de Nexo entre las comillas. Puedes anteponer
+# tus espacios negativos para centrar la imagen, igual que en tus menus.
+# Deja "" (vacio) para no tocar ese tipo de contenedor.
+chest-backgrounds:
+  single: ""   # cofre simple (3 filas)
+  double: ""   # cofre doble (6 filas)
+  ender: ""    # ender chest
+  barrel: ""   # barril
+
+# Que hacer al ABRIR la pantalla de avances vanilla (tecla L).
+advancements:
+  enabled: true
+  # Menu de DeluxeMenus que se abre DIRECTAMENTE por la API (mas rapido).
+  menu: "main_menu"
+  # Opcional: comando de RESPALDO. Solo se usa si el menu de arriba esta vacio
+  # o si la API de DeluxeMenus falla. %player% = nombre del jugador (consola).
+  # Ejemplo: "dm open main_menu %player%"
+  command: ""
