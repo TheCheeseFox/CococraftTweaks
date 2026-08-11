@@ -1,6 +1,6 @@
 package net.cococraft.tweaks.protection;
 
-import com.palmergames.bukkit.towny.TownyActionEventExecutor;
+import com.palmergames.bukkit.towny.event.executors.TownyActionEventExecutor;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import org.bukkit.Location;
 import org.bukkit.Material;
