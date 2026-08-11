@@ -8,6 +8,7 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
+import net.cococraft.tweaks.protection.FurnitureProtectionListener;
 import org.bukkit.Bukkit;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Chest;
@@ -50,6 +51,16 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
             return;
         }
         getServer().getPluginManager().registerEvents(this, this);
+
+        // --- Proteccion Towny para el furniture entity-based de Crop & Kettle ---
+        // (plates, basins, cutting boards, y todo lo que lleve el tag "smithed.block")
+        if (getServer().getPluginManager().getPlugin("Towny") != null) {
+            getServer().getPluginManager().registerEvents(new FurnitureProtectionListener(), this);
+            getLogger().info("Proteccion Towny para furniture de Crop&Kettle activada.");
+        } else {
+            getLogger().warning("Towny no encontrado: proteccion de furniture desactivada.");
+        }
+
         ProtocolManager pm = ProtocolLibrary.getProtocolManager();
 
         // Fondo de contenedores vanilla: reescribe el titulo del contenedor al abrir
