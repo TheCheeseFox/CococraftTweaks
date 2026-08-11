@@ -82,7 +82,7 @@ public final class FurnitureProtectionListener implements Listener {
     );
 
     // ------------------------------------------------------------------ ROMPER
-    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOW)  // sin ignoreCancelled: el evento puede llegar pre-cancelado para interaction
     public void onAttackFurniture(PrePlayerAttackEntityEvent event) {
         final Entity target = event.getAttacked();
         if (!isFurnitureEntity(target)) return;
