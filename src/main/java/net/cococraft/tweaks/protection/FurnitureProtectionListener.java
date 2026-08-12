@@ -1,5 +1,5 @@
 package net.cococraft.tweaks.protection;
-
+ 
 import com.palmergames.bukkit.towny.event.executors.TownyActionEventExecutor;
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import org.bukkit.Location;
@@ -19,9 +19,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-
+ 
 import java.util.Set;
-
+ 
 /**
  * Integra la proteccion de Towny con el furniture entity-based de Crop & Kettle.
  *
@@ -47,10 +47,10 @@ import java.util.Set;
  * rack, mr kettle, scarecrow, etc.
  */
 public final class FurnitureProtectionListener implements Listener {
-
+ 
     /** Tag comun a todo el furniture del pack (convencion Smithed). */
     private static final String BLOCK_TAG = "smithed.block";
-
+ 
     /**
      * item_model (namespace:path) de TODOS los items que colocan furniture del pack.
      * Detectar por item_model es API estable (ItemMeta#getItemModel) y no requiere
@@ -80,58 +80,58 @@ public final class FurnitureProtectionListener implements Listener {
             "cnk:witch_cauldron_item",
             "cnk:wreath_item"
     );
-
+ 
     // ------------------------------------------------------------------ ROMPER
-    @EventHandler(priority = EventPriority.LOW)  // sin ignoreCancelled: el evento puede llegar pre-cancelado para interaction
+    @EventHandler(priority = EventPriority.HIGHEST)  // ultimo en decidir; sin ignoreCancelled porque el evento puede llegar pre-cancelado para interaction
     public void onAttackFurniture(PrePlayerAttackEntityEvent event) {
         final Entity target = event.getAttacked();
         if (!isFurnitureEntity(target)) return;
-
+ 
         final Location loc = target.getLocation();
         if (!TownyActionEventExecutor.canDestroy(event.getPlayer(), loc, materialAt(loc))) {
             event.setCancelled(true);
         }
     }
-
+ 
     // -------------------------------------------------------------------- USAR
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onUseFurniture(PlayerInteractEntityEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return; // evita doble disparo
         final Entity target = event.getRightClicked();
         if (!isFurnitureEntity(target)) return;
-
+ 
         final Location loc = target.getLocation();
         // "switch" = interactuar/usar sin construir ni destruir (como una palanca).
         if (!TownyActionEventExecutor.canSwitch(event.getPlayer(), loc, materialAt(loc))) {
             event.setCancelled(true);
         }
     }
-
+ 
     // ----------------------------------------------------------------- COLOCAR
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onPlaceFurniture(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;           // solo mano principal
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;   // colocar es sobre bloque
         if (event.getClickedBlock() == null) return;
-
+ 
         final ItemStack item = event.getItem();
         if (!isPlacerItem(item)) return;
-
+ 
         // Celda donde apareceria el mueble (cara del bloque clicado).
         final Location placeLoc = event.getClickedBlock()
                 .getRelative(event.getBlockFace()).getLocation();
-
+ 
         if (!TownyActionEventExecutor.canBuild(event.getPlayer(), placeLoc, item.getType())) {
             event.setCancelled(true);
         }
     }
-
+ 
     // ----------------------------------------------------------------- helpers
     private static boolean isFurnitureEntity(Entity e) {
         return (e instanceof Interaction || e instanceof ItemDisplay)
                 && e.getScoreboardTags().contains(BLOCK_TAG);
     }
-
+ 
     private static boolean isPlacerItem(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return false;
         final ItemMeta meta = item.getItemMeta();
@@ -139,7 +139,7 @@ public final class FurnitureProtectionListener implements Listener {
         final NamespacedKey model = meta.getItemModel();
         return model != null && PLACER_MODELS.contains(model.toString());
     }
-
+ 
     private static Material materialAt(Location loc) {
         final Block block = loc.getBlock();
         return block.getType() == Material.AIR ? Material.BARRIER : block.getType();
