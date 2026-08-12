@@ -1,7 +1,6 @@
 package net.cococraft.tweaks.protection;
  
 import com.palmergames.bukkit.towny.event.executors.TownyActionEventExecutor;
-import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -16,6 +15,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -29,8 +29,9 @@ import java.util.Set;
  * vanilla (y que por tanto Towny no ve por si solo):
  *
  *  1) ROMPER  -> el jugador ATACA (click izq.) la entidad `interaction` del mueble.
- *                En Paper eso solo dispara PrePlayerAttackEntityEvent. Cancelarlo
- *                evita que se registre `attack:{}` y el datapack no rompe el mueble.
+ *                En Paper 26.2 eso dispara EntityDamageByEntityEvent
+ *                (cause=ENTITY_ATTACK), que es el daño real que el datapack lee
+ *                como player_hurt_entity. Cancelarlo impide que procese el golpe.
  *                Gate: TownyActionEventExecutor.canDestroy(...)
  *
  *  2) USAR    -> el jugador hace RIGHT-CLICK sobre la entidad `interaction`
@@ -82,13 +83,17 @@ public final class FurnitureProtectionListener implements Listener {
     );
  
     // ------------------------------------------------------------------ ROMPER
-    @EventHandler(priority = EventPriority.HIGHEST)  // ultimo en decidir; sin ignoreCancelled porque el evento puede llegar pre-cancelado para interaction
-    public void onAttackFurniture(PrePlayerAttackEntityEvent event) {
-        final Entity target = event.getAttacked();
+    // En Paper 26.2, golpear una interaction dispara EntityDamageByEntityEvent
+    // (cause=ENTITY_ATTACK). ESE es el daño real que el datapack detecta como
+    // player_hurt_entity. Cancelarlo aqui impide que el datapack procese el golpe.
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onDamageFurniture(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof Player player)) return;
+        final Entity target = event.getEntity();
         if (!isFurnitureEntity(target)) return;
  
         final Location loc = target.getLocation();
-        if (!TownyActionEventExecutor.canDestroy(event.getPlayer(), loc, materialAt(loc))) {
+        if (!TownyActionEventExecutor.canDestroy(player, loc, materialAt(loc))) {
             event.setCancelled(true);
         }
     }
