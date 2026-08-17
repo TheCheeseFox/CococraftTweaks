@@ -102,7 +102,9 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
                 }
             }
         });
- 
+     
+     BossBarFontListener.register(this);
+     
         getLogger().info("CococraftTweaks activo.");
     }
  
