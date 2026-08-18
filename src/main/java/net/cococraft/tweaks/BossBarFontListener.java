@@ -43,31 +43,32 @@ public final class BossBarFontListener {
                 PacketType.Play.Server.BOSS) {
             @Override
             public void onPacketSending(PacketEvent event) {
-                // Solo las acciones ADD y UPDATE_NAME llevan título; el resto
-                // (progress, style, remove) no tiene componente -> size 0.
                 var components = event.getPacket().getChatComponents();
+                getLogger().info("[BOSSBAR] paquete BOSS recibido. chatComponents size=" + components.size());
+
                 if (components.size() == 0) return;
- 
+
                 WrappedChatComponent wrapped = components.readSafely(0);
-                if (wrapped == null) return;
- 
+                if (wrapped == null) { getLogger().info("[BOSSBAR] wrapped null"); return; }
+
                 String json = wrapped.getJson();
+                getLogger().info("[BOSSBAR] json titulo = " + json);
+
                 if (json == null || json.isEmpty()) return;
- 
+
                 final Component title;
                 try {
                     title = GsonComponentSerializer.gson().deserialize(json);
-                } catch (Exception ex) {
-                    return; // json no parseable -> lo dejamos pasar sin tocar
-                }
- 
-                if (!isTargetTitle(title)) return;
- 
-                // Aplica el font a todo el título (se hereda al texto traducido)
+                } catch (Exception ex) { getLogger().info("[BOSSBAR] json no parseable"); return; }
+
+                boolean match = isTargetTitle(title);
+                getLogger().info("[BOSSBAR] coincide dragon/wither/raid? " + match);
+                if (!match) return;
+
                 Component fonted = title.font(FONT);
                 wrapped.setJson(GsonComponentSerializer.gson().serialize(fonted));
                 components.write(0, wrapped);
-                // No cancelamos: el paquete modificado se reenvía tal cual.
+                getLogger().info("[BOSSBAR] font aplicado.");
             }
         });
     }
