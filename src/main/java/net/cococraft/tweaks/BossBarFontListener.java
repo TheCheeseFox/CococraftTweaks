@@ -18,21 +18,20 @@ import java.util.Set;
 /**
  * Inyecta el font custom "minecraftten:ten" en las bossbars vanilla del
  * Ender Dragon, el Wither y las Raids, interceptando el paquete BOSS con
- * ProtocolLib. No toca bossbars custom (de plugins) ni el resto del texto.
+ * ProtocolLib. Version con logs de DEBUG para diagnosticar.
  *
- * Registrar en onEnable de tu plugin:
- *     BossBarFontListener.register(this);
+ * Registrar en onEnable:  BossBarFontListener.register(this);
  */
 public final class BossBarFontListener {
  
-    // El font añadido de tu resource pack (assets/minecraftten/font/ten.json)
+    // El font anadido de tu resource pack (assets/minecraftten/font/ten.json)
     private static final Key FONT = Key.key("minecraftten", "ten");
  
-    // Claves de traducción de los títulos vanilla a los que SÍ aplicamos el font
+    // Claves de traduccion de los titulos vanilla a los que aplicamos el font
     private static final Set<String> TARGET_KEYS = Set.of(
             "entity.minecraft.ender_dragon",  // Ender Dragon
             "entity.minecraft.wither",        // Wither
-            "event.minecraft.raid"            // Raid / Incursión
+            "event.minecraft.raid"            // Raid / Incursion
     );
  
     private BossBarFontListener() {}
@@ -44,36 +43,41 @@ public final class BossBarFontListener {
             @Override
             public void onPacketSending(PacketEvent event) {
                 var components = event.getPacket().getChatComponents();
-                getLogger().info("[BOSSBAR] paquete BOSS recibido. chatComponents size=" + components.size());
-
+                plugin.getLogger().info("[BOSSBAR] paquete BOSS. chatComponents size=" + components.size());
+ 
                 if (components.size() == 0) return;
-
+ 
                 WrappedChatComponent wrapped = components.readSafely(0);
-                if (wrapped == null) { getLogger().info("[BOSSBAR] wrapped null"); return; }
-
+                if (wrapped == null) {
+                    plugin.getLogger().info("[BOSSBAR] wrapped null");
+                    return;
+                }
+ 
                 String json = wrapped.getJson();
-                getLogger().info("[BOSSBAR] json titulo = " + json);
-
+                plugin.getLogger().info("[BOSSBAR] json titulo = " + json);
                 if (json == null || json.isEmpty()) return;
-
+ 
                 final Component title;
                 try {
                     title = GsonComponentSerializer.gson().deserialize(json);
-                } catch (Exception ex) { getLogger().info("[BOSSBAR] json no parseable"); return; }
-
+                } catch (Exception ex) {
+                    plugin.getLogger().info("[BOSSBAR] json no parseable");
+                    return;
+                }
+ 
                 boolean match = isTargetTitle(title);
-                getLogger().info("[BOSSBAR] coincide dragon/wither/raid? " + match);
+                plugin.getLogger().info("[BOSSBAR] coincide dragon/wither/raid? " + match);
                 if (!match) return;
-
+ 
                 Component fonted = title.font(FONT);
                 wrapped.setJson(GsonComponentSerializer.gson().serialize(fonted));
                 components.write(0, wrapped);
-                getLogger().info("[BOSSBAR] font aplicado.");
+                plugin.getLogger().info("[BOSSBAR] font aplicado.");
             }
         });
     }
  
-    /** true si el título (o alguno de sus hijos) es dragon/wither/raid. */
+    /** true si el titulo (o alguno de sus hijos) es dragon/wither/raid. */
     private static boolean isTargetTitle(Component c) {
         if (c instanceof TranslatableComponent tc && TARGET_KEYS.contains(tc.key())) {
             return true;
@@ -84,4 +88,3 @@ public final class BossBarFontListener {
         return false;
     }
 }
- 
