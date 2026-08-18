@@ -14,27 +14,42 @@ import net.kyori.adventure.text.TranslatableComponent;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.plugin.Plugin;
  
-import java.util.Set;
+import java.util.Map;
  
 /**
- * Inyecta el font custom "minecraftten:ten" en las bossbars vanilla del
- * Ender Dragon, el Wither y las Raids.
+ * Reescribe las bossbars vanilla (Ender Dragon, Wither, Raid) para mostrar:
+ *   [icono]  [NOMBRE custom en font minecraftten:ten]
  *
- * En 26.2 el titulo va ANIDADO dentro del objeto "operation" del paquete BOSS,
- * asi que se accede con getStructures() (no con getChatComponents()).
- * Version con logs de DEBUG.
+ * El icono usa el font default (donde viven los glifos \uEBB1/2/3 de tu pack)
+ * y el nombre usa minecraftten:ten. Se reconstruye el titulo entero, asi que
+ * el lang de estas claves ya no importa (el plugin lo reemplaza).
  *
  * Registrar en onEnable:  BossBarFontListener.register(this);
  */
 public final class BossBarFontListener {
  
+    // Font del TEXTO (tu font anadido)
     private static final Key FONT = Key.key("minecraftten", "ten");
+    // Font del ICONO (donde estan mapeados \uEBB1/2/3 = el default de tu pack)
+    private static final Key ICON_FONT = Key.key("minecraft", "default");
  
-    private static final Set<String> TARGET_KEYS = Set.of(
-            "entity.minecraft.ender_dragon",
-            "entity.minecraft.wither",
-            "event.minecraft.raid"
+    // ======================================================================
+    //  EDITA AQUI los nombres y/o iconos de cada bossbar:
+    //    title("<glifo del icono>", "<NOMBRE que quieras mostrar>")
+    // ======================================================================
+    private static final Map<String, Component> REPLACEMENTS = Map.of(
+            "entity.minecraft.ender_dragon",     title("\uEBB1", "ENDERDRAGON"),
+            "entity.minecraft.wither",           title("\uEBB2", "WITHER"),
+            "event.minecraft.raid",              title("\uEBB3", "INVASION"),
+            "event.minecraft.raid.defeat.full",  title("\uEBB3", "INVASION - DERROTA"),
+            "event.minecraft.raid.victory.full", title("\uEBB3", "INVASION - VICTORIA")
     );
+ 
+    /** Construye: icono (font default) + espacio + nombre (font minecraftten:ten). */
+    private static Component title(String iconGlyph, String name) {
+        return Component.text(iconGlyph).font(ICON_FONT)
+                .append(Component.text(" " + name).font(FONT));
+    }
  
     private BossBarFontListener() {}
  
@@ -45,7 +60,6 @@ public final class BossBarFontListener {
             @Override
             public void onPacketSending(PacketEvent event) {
                 var structures = event.getPacket().getStructures();
-                plugin.getLogger().info("[BOSSBAR] structures size=" + structures.size());
                 if (structures.size() == 0) return;
  
                 for (int i = 0; i < structures.size(); i++) {
@@ -64,7 +78,6 @@ public final class BossBarFontListener {
                     if (wrapped == null) continue;
  
                     String json = wrapped.getJson();
-                    plugin.getLogger().info("[BOSSBAR] json en structure " + i + " = " + json);
                     if (json == null || json.isEmpty()) continue;
  
                     final Component title;
@@ -74,27 +87,29 @@ public final class BossBarFontListener {
                         continue;
                     }
  
-                    boolean match = isTargetTitle(title);
-                    plugin.getLogger().info("[BOSSBAR] structure " + i + " coincide? " + match);
-                    if (!match) continue;
+                    String key = findKey(title);
+                    if (key == null) continue;
  
-                    Component fonted = title.font(FONT);
-                    wrapped.setJson(GsonComponentSerializer.gson().serialize(fonted));
+                    Component replacement = REPLACEMENTS.get(key);
+                    if (replacement == null) continue;
+ 
+                    wrapped.setJson(GsonComponentSerializer.gson().serialize(replacement));
                     comps.write(0, wrapped);
                     structures.write(i, op);
-                    plugin.getLogger().info("[BOSSBAR] font aplicado en structure " + i);
                 }
             }
         });
     }
  
-    private static boolean isTargetTitle(Component c) {
-        if (c instanceof TranslatableComponent tc && TARGET_KEYS.contains(tc.key())) {
-            return true;
+    /** Devuelve la clave de traduccion (dragon/wither/raid) si el titulo la contiene. */
+    private static String findKey(Component c) {
+        if (c instanceof TranslatableComponent tc && REPLACEMENTS.containsKey(tc.key())) {
+            return tc.key();
         }
         for (Component child : c.children()) {
-            if (isTargetTitle(child)) return true;
+            String k = findKey(child);
+            if (k != null) return k;
         }
-        return false;
+        return null;
     }
 }
