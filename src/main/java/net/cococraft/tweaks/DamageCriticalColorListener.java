@@ -19,6 +19,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.plugin.Plugin;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,11 +44,16 @@ public final class DamageCriticalColorListener implements Listener {
 
     private static final int TEXT_DATA_INDEX = 23;
     // Color para golpes criticos. Ajusta el hex a gusto.
-    private static final TextColor CRIT_COLOR = TextColor.fromHexString("#FFD700"); // dorado
+    private static final TextColor CRIT_COLOR = TextColor.fromHexString("#EA3A23"); // dorado
+    // Cuanto tiempo (ms) sigue siendo valido el flag de "acabo de pegar critico"
+    // antes de considerarlo obsoleto. CMI manda el text_display del daño casi
+    // instantaneo, asi que con margen de sobra alcanza para no confundirlo con
+    // otros text_display (ej. el contador de tiempo de combate) que aparezcan despues.
+    private static final long CRIT_WINDOW_MS = 300;
 
     private final Plugin plugin;
-    // Jugador que acaba de dar un golpe critico, pendiente de que le llegue su text_display.
-    private final Set<UUID> pendingCrit = ConcurrentHashMap.newKeySet();
+    // Jugador que acaba de dar un golpe critico -> timestamp del golpe (para poder vencerlo).
+    private final Map<UUID, Long> pendingCrit = new ConcurrentHashMap<>();
     // entityId de un text_display que sabemos que corresponde a un golpe critico.
     private final Set<Integer> critEntityIds = ConcurrentHashMap.newKeySet();
 
@@ -69,7 +75,16 @@ public final class DamageCriticalColorListener implements Listener {
             public void onPacketSending(PacketEvent event) {
                 Player receiver = event.getPlayer();
                 if (receiver == null) return;
-                if (!instance.pendingCrit.contains(receiver.getUniqueId())) return;
+
+                Long hitAt = instance.pendingCrit.get(receiver.getUniqueId());
+                if (hitAt == null) return;
+                if (System.currentTimeMillis() - hitAt > CRIT_WINDOW_MS) {
+                    // Flag vencido (ya paso demasiado tiempo desde el golpe):
+                    // lo descartamos para que no se le pegue a un text_display
+                    // no relacionado (ej. contador de tiempo de combate de CMI).
+                    instance.pendingCrit.remove(receiver.getUniqueId());
+                    return;
+                }
 
                 // Ojo: no consumir el flag todavia. En combate llegan otros
                 // SPAWN_ENTITY (orbes de xp, flechas, etc.) antes que el
@@ -103,7 +118,7 @@ public final class DamageCriticalColorListener implements Listener {
     public void onHit(EntityDamageByEntityEvent e) {
         if (!(e.getDamager() instanceof Player p)) return;
         if (e.isCritical()) {
-            pendingCrit.add(p.getUniqueId());
+            pendingCrit.put(p.getUniqueId(), System.currentTimeMillis());
         }
     }
 
@@ -117,7 +132,12 @@ public final class DamageCriticalColorListener implements Listener {
             WrappedDataValue dv = values.get(i);
             if (dv.getIndex() != TEXT_DATA_INDEX) continue;
 
-            WrappedChatComponent wrapped = WrappedChatComponent.fromHandle(dv.getValue());
+            Object rawValue = dv.getValue();
+            // ProtocolLib en esta version ya entrega el valor envuelto (WrappedChatComponent),
+            // no el handle NMS crudo -- fromHandle() sobre algo ya envuelto tira IllegalArgumentException.
+            WrappedChatComponent wrapped = (rawValue instanceof WrappedChatComponent alreadyWrapped)
+                    ? alreadyWrapped
+                    : WrappedChatComponent.fromHandle(rawValue);
             String json = wrapped.getJson();
             if (json == null || json.isEmpty()) return;
 
