@@ -69,10 +69,18 @@ public final class DamageCriticalColorListener implements Listener {
             public void onPacketSending(PacketEvent event) {
                 Player receiver = event.getPlayer();
                 if (receiver == null) return;
-                if (!instance.pendingCrit.remove(receiver.getUniqueId())) return;
+                if (!instance.pendingCrit.contains(receiver.getUniqueId())) return;
 
+                // Ojo: no consumir el flag todavia. En combate llegan otros
+                // SPAWN_ENTITY (orbes de xp, flechas, etc.) antes que el
+                // text_display del numero de daño - si consumimos el flag con
+                // el primer SPAWN_ENTITY que sea, se pierde con la entidad
+                // equivocada y el text_display real nunca queda marcado.
                 Object entityTypeField = event.getPacket().getModifier().read(2);
                 if (entityTypeField == null || !entityTypeField.toString().contains("text_display")) return;
+
+                // Recien aqui, confirmado que es el text_display, se consume.
+                instance.pendingCrit.remove(receiver.getUniqueId());
 
                 Integer entityId = event.getPacket().getIntegers().readSafely(0);
                 if (entityId != null) instance.critEntityIds.add(entityId);
@@ -127,6 +135,7 @@ public final class DamageCriticalColorListener implements Listener {
 
             values.set(i, new WrappedDataValue(dv.getIndex(), dv.getSerializer(), newWrapped.getHandle()));
             event.getPacket().getDataValueCollectionModifier().write(0, values);
+            plugin.getLogger().info("[CritColor] Numero recoloreado OK.");
             return;
         }
     }
