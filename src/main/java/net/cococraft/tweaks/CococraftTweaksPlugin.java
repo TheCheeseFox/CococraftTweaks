@@ -66,8 +66,8 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(new FurnitureHitDebugListener(this), this);
         getLogger().warning("[CNK-DEBUG] Listener de diagnostico ACTIVO (quitar en produccion).");
 
-        // --- DEBUG TEMPORAL: identifica el paquete de los damage numbers de CMI. QUITAR luego. ---
-        DamageNumberDebugListener.register(this);
+        // --- Recolorea los damage numbers de CMI cuando el golpe es critico ---
+        DamageCriticalColorListener.register(this);
  
         ProtocolManager pm = ProtocolLibrary.getProtocolManager();
  
