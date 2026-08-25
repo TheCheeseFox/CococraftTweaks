@@ -26,25 +26,30 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Recolorea el holograma de numeros de daño de CMI (ShowDamageNumbers) cuando
- * el golpe fue critico.
+ * el golpe supera DAMAGE_THRESHOLD de daño real.
  *
  * CMI los manda como una entidad fantasma "text_display": primero un
  * SPAWN_ENTITY, seguido de un ENTITY_METADATA cuyo indice 23 trae el texto
  * (confirmado con el listener de debug: id=22 glow, 23=texto, 24=line_width,
  * 25=background, 26=opacity, 27=flags).
  *
- * Deteccion de critico: EntityDamageByEntityEvent#isCritical(), el propio
- * calculo interno de vanilla (incluye el attack cooldown, no es una
- * aproximacion nuestra). Es exacto: es la misma condicion que decide si el
- * cliente dibuja la particula CRIT.
+ * Criterio: EntityDamageByEntityEvent#getFinalDamage() (el daño real aplicado,
+ * post-armadura/resistencia/etc). Se eligio esto en vez de isCritical() porque
+ * ese flag es especifico de cada arma y no siempre refleja un golpe fuerte de
+ * verdad (ej. un tridente lanzado suave puede salir "critico" sin hacer daño
+ * alto). Con el umbral de daño, espada/arco/lanza/mazo/tridente quedan
+ * cubiertos por igual sin necesitar deteccion especial por arma.
  *
  * Registrar en onEnable:  DamageCriticalColorListener.register(this);
  */
 public final class DamageCriticalColorListener implements Listener {
 
     private static final int TEXT_DATA_INDEX = 23;
-    // Color para golpes criticos. Ajusta el hex a gusto.
-    private static final TextColor CRIT_COLOR = TextColor.fromHexString("#EA3A23"); // dorado
+    // Color para golpes que superan el umbral. Ajusta el hex a gusto.
+    private static final TextColor CRIT_COLOR = TextColor.fromHexString("#EA3A23");
+    // Daño minimo (ya aplicado el daño final, lo que realmente pierde el objetivo)
+    // para que el numero se coloree. Ajusta el numero a gusto.
+    private static final double DAMAGE_THRESHOLD = 14.0;
     // Cuanto tiempo (ms) sigue siendo valido el flag de "acabo de pegar critico"
     // antes de considerarlo obsoleto. CMI manda el text_display del daño casi
     // instantaneo, asi que con margen de sobra alcanza para no confundirlo con
@@ -116,10 +121,31 @@ public final class DamageCriticalColorListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onHit(EntityDamageByEntityEvent e) {
-        if (!(e.getDamager() instanceof Player p)) return;
-        if (e.isCritical()) {
+        Player p = resolveAttacker(e.getDamager());
+        if (p == null) return;
+        // Criterio unico para todas las armas: el daño REAL que recibio el
+        // objetivo (post-armadura/resistencia/etc, lo mismo que muestra el
+        // numero de CMI). Reemplaza a isCritical(): ese flag es especifico
+        // de cada arma y no siempre significa "pego fuerte" (ej. un tridente
+        // lanzado suave puede salir "critico" sin hacer daño real alto).
+        // Con esto, lanza/arco/mazo/tridente quedan cubiertos igual, sin
+        // necesitar deteccion especial por arma.
+        if (e.getFinalDamage() >= DAMAGE_THRESHOLD) {
             pendingCrit.put(p.getUniqueId(), System.currentTimeMillis());
         }
+    }
+
+    /**
+     * Cuerpo a cuerpo (espada, lanza si es un item vanilla/Nexo normal, tridente
+     * sin lanzar): el damager ya es el jugador.
+     * A distancia (flecha, tridente lanzado): el damager es el proyectil, hay
+     * que sacar al jugador desde su shooter.
+     */
+    private static Player resolveAttacker(org.bukkit.entity.Entity damager) {
+        if (damager instanceof Player p) return p;
+        if (damager instanceof org.bukkit.entity.Projectile proj
+                && proj.getShooter() instanceof Player p) return p;
+        return null;
     }
 
     @SuppressWarnings("unchecked")
