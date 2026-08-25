@@ -53,6 +53,14 @@
             <version>0.101.2.0</version>
             <scope>provided</scope>
         </dependency>
+        <!-- AuraSkills: publicado en Maven Central, no necesita repo custom.
+             Solo para compilar; en el servidor ya esta instalado. -->
+        <dependency>
+            <groupId>dev.aurelium</groupId>
+            <artifactId>auraskills-api-bukkit</artifactId>
+            <version>2.3.7</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
