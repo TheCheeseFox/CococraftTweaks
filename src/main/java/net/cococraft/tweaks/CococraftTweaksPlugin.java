@@ -1,5 +1,5 @@
 package net.cococraft.tweaks;
- 
+
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
@@ -24,35 +24,35 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.java.JavaPlugin;
- 
+
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
- 
+
 public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
- 
+
     private String chestSingle, chestDouble, enderChest, barrel;
     private String advMenu, advCommand;
     private boolean advEnabled;
- 
+
     private final Map<UUID, String> pendingBg = new ConcurrentHashMap<>();
     private final Set<UUID> advScreenOpen = ConcurrentHashMap.newKeySet();
- 
+
     @Override
     public void onEnable() {
         saveDefaultConfig();   // crea config.yml la primera vez
         loadCfg();
- 
+
         if (getServer().getPluginManager().getPlugin("ProtocolLib") == null) {
             getLogger().severe("ProtocolLib no encontrado. Deshabilitando.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
         getServer().getPluginManager().registerEvents(this, this);
- 
+
         // --- Proteccion Towny para el furniture entity-based de Crop & Kettle ---
         // (plates, basins, cutting boards, y todo lo que lleve el tag "smithed.block")
         if (getServer().getPluginManager().getPlugin("Towny") != null) {
@@ -61,16 +61,23 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
         } else {
             getLogger().warning("Towny no encontrado: proteccion de furniture desactivada.");
         }
- 
+
         // --- DEBUG TEMPORAL: identifica que evento mata el plato. QUITAR luego. ---
         getServer().getPluginManager().registerEvents(new FurnitureHitDebugListener(this), this);
         getLogger().warning("[CNK-DEBUG] Listener de diagnostico ACTIVO (quitar en produccion).");
 
         // --- Recolorea los damage numbers de CMI cuando el golpe es critico ---
         DamageCriticalColorListener.register(this);
- 
+
+        // --- DEBUG TEMPORAL: descubre la estructura real de DamageMeta de AuraSkills. QUITAR luego. ---
+        if (getServer().getPluginManager().getPlugin("AuraSkills") != null) {
+            AuraSkillsDamageDebugListener.register(this);
+        } else {
+            getLogger().warning("AuraSkills no encontrado: debug de DamageMeta desactivado.");
+        }
+
         ProtocolManager pm = ProtocolLibrary.getProtocolManager();
- 
+
         // Fondo de contenedores vanilla: reescribe el titulo del contenedor al abrir
         pm.addPacketListener(new PacketAdapter(this, ListenerPriority.NORMAL,
                 PacketType.Play.Server.OPEN_WINDOW) {
@@ -85,7 +92,7 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
                 packet.getChatComponents().write(0, WrappedChatComponent.fromJson(newJson));
             }
         });
- 
+
         // Al ABRIR la pantalla de avances vanilla: abre el menu de DeluxeMenus directamente
         pm.addPacketListener(new PacketAdapter(this, ListenerPriority.NORMAL,
                 PacketType.Play.Client.ADVANCEMENTS) {
@@ -105,12 +112,12 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
                 }
             }
         });
-     
+
         BossBarFontListener.register(this);
 
         getLogger().info("CococraftTweaks activo.");
     }
- 
+
     private void loadCfg() {
         reloadConfig();
         chestSingle = getConfig().getString("chest-backgrounds.single", "");
@@ -121,7 +128,7 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
         advMenu     = getConfig().getString("advancements.menu", "main_menu");
         advCommand  = getConfig().getString("advancements.command", "");
     }
- 
+
     // ---- Apertura del menu al pulsar L ----
     private void openAdvMenu(Player p) {
         // 1) Intento directo por la API de DeluxeMenus (mas rapido, sin pasar por el comando)
@@ -134,7 +141,7 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
                     advCommand.replace("%player%", p.getName()));
         }
     }
- 
+
     /**
      * Abre un menu de DeluxeMenus por su nombre usando reflection, para no depender
      * de la version exacta de la API. Devuelve true si se abrio correctamente.
@@ -144,7 +151,7 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
         try {
             Class<?> menuClass = Class.forName("com.extendedclip.deluxemenus.menu.Menu");
             Object menu = null;
- 
+
             // getMenuByName(String) -> Optional<Menu>  (versiones nuevas)
             try {
                 Method m = menuClass.getMethod("getMenuByName", String.class);
@@ -155,12 +162,12 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
                 Method m = menuClass.getMethod("getMenu", String.class);
                 menu = m.invoke(null, menuName);
             }
- 
+
             if (menu == null) {
                 getLogger().warning("DeluxeMenus: el menu '" + menuName + "' no existe.");
                 return false;
             }
- 
+
             // Busca openMenu(Player) sin asumir la firma exacta
             for (Method mm : menu.getClass().getMethods()) {
                 if (mm.getName().equals("openMenu")
@@ -177,7 +184,7 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
             return false;
         }
     }
- 
+
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (cmd.getName().equalsIgnoreCase("cococrafttweaks")) {
@@ -195,7 +202,7 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
         }
         return false;
     }
- 
+
     @EventHandler
     public void onOpen(InventoryOpenEvent e) {
         if (!(e.getPlayer() instanceof Player)) return;
@@ -204,7 +211,7 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
         if (glyph != null && !glyph.isEmpty()) pendingBg.put(id, glyph);
         else pendingBg.remove(id);
     }
- 
+
     private String glyphFor(Inventory inv) {
         InventoryType type = inv.getType();
         InventoryHolder holder = inv.getHolder();
@@ -216,14 +223,14 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
         }
         return null;
     }
- 
+
     private String readEnum(PacketEvent event) {
         for (Object o : event.getPacket().getModifier().getValues()) {
             if (o != null && o.getClass().isEnum()) return ((Enum<?>) o).name();
         }
         return "";
     }
- 
+
     private static String escape(String s) {
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
