@@ -122,15 +122,20 @@ public final class DamageCriticalColorListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onHit(EntityDamageByEntityEvent e) {
         Player p = resolveAttacker(e.getDamager());
+        // DEBUG TEMPORAL: imprime todo golpe de jugador, pase lo que pase. QUITAR luego.
+        if (p != null) {
+            plugin.getLogger().warning("[CritColor-DEBUG] damager=" + e.getDamager().getType()
+                    + " isCritical=" + e.isCritical()
+                    + " finalDamage=" + e.getFinalDamage());
+        }
         if (p == null) return;
-        // Criterio unico para todas las armas: el daño REAL que recibio el
-        // objetivo (post-armadura/resistencia/etc, lo mismo que muestra el
-        // numero de CMI). Reemplaza a isCritical(): ese flag es especifico
-        // de cada arma y no siempre significa "pego fuerte" (ej. un tridente
-        // lanzado suave puede salir "critico" sin hacer daño real alto).
-        // Con esto, lanza/arco/mazo/tridente quedan cubiertos igual, sin
-        // necesitar deteccion especial por arma.
-        if (e.getFinalDamage() >= DAMAGE_THRESHOLD) {
+        // Dos criterios, cualquiera de los dos activa el color:
+        //  1) isCritical() de vanilla: la tecnica de salto-golpe siempre se
+        //     reconoce, aunque el arma sea debil y el numero no llegue al umbral.
+        //  2) Umbral de daño real: cubre golpes fuertes que no fueron tecnica
+        //     de salto (tridente/lanza/mazo con buff, critico de AuraSkills, etc.)
+        //     sin necesitar deteccion especial por arma.
+        if (e.isCritical() || e.getFinalDamage() >= DAMAGE_THRESHOLD) {
             pendingCrit.put(p.getUniqueId(), System.currentTimeMillis());
         }
     }
