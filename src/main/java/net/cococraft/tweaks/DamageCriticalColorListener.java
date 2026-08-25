@@ -122,12 +122,6 @@ public final class DamageCriticalColorListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onHit(EntityDamageByEntityEvent e) {
         Player p = resolveAttacker(e.getDamager());
-        // DEBUG TEMPORAL: imprime todo golpe de jugador, pase lo que pase. QUITAR luego.
-        if (p != null) {
-            plugin.getLogger().warning("[CritColor-DEBUG] damager=" + e.getDamager().getType()
-                    + " isCritical=" + e.isCritical()
-                    + " finalDamage=" + e.getFinalDamage());
-        }
         if (p == null) return;
         // Dos criterios, cualquiera de los dos activa el color:
         //  1) isCritical() de vanilla: la tecnica de salto-golpe siempre se
