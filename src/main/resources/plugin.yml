@@ -4,7 +4,7 @@ main: net.cococraft.tweaks.CococraftTweaksPlugin
 api-version: '1.20'
 author: Cococraft
 depend: [ProtocolLib]
-softdepend: [DeluxeMenus]
+softdepend: [DeluxeMenus, AuraSkills]
 description: Fondo de contenedores vanilla + abre un menu de DeluxeMenus al pulsar L.
 commands:
   cococrafttweaks:
