@@ -69,13 +69,6 @@ public class CococraftTweaksPlugin extends JavaPlugin implements Listener {
         // --- Recolorea los damage numbers de CMI cuando el golpe es critico ---
         DamageCriticalColorListener.register(this);
 
-        // --- DEBUG TEMPORAL: descubre la estructura real de DamageMeta de AuraSkills. QUITAR luego. ---
-        if (getServer().getPluginManager().getPlugin("AuraSkills") != null) {
-            AuraSkillsDamageDebugListener.register(this);
-        } else {
-            getLogger().warning("AuraSkills no encontrado: debug de DamageMeta desactivado.");
-        }
-
         ProtocolManager pm = ProtocolLibrary.getProtocolManager();
 
         // Fondo de contenedores vanilla: reescribe el titulo del contenedor al abrir
