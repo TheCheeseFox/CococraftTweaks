@@ -66,8 +66,36 @@ public final class AuraSkillsDamageDebugListener implements Listener {
                 m.setAccessible(true);
                 Object value = m.invoke(meta);
                 log("  " + m.getName() + "() = " + value);
+                // Si el valor es una coleccion (ej. getAttackModifiers()), abrimos
+                // cada elemento tambien - ahi es donde probablemente vive el
+                // modificador de "critico", como un objeto DamageModifier con
+                // su propio nombre/tipo/valor, no visible en el toString() default.
+                if (value instanceof Iterable<?> iterable) {
+                    int idx = 0;
+                    for (Object item : iterable) {
+                        if (item == null) continue;
+                        log("    [" + idx + "] class = " + item.getClass().getName());
+                        dumpObject(item, "      ");
+                        idx++;
+                    }
+                }
             } catch (Exception e) {
                 log("  " + m.getName() + "() lanzo: " + e.getMessage());
+            }
+        }
+    }
+
+    private void dumpObject(Object obj, String indent) {
+        for (Method m : obj.getClass().getMethods()) {
+            if (m.getParameterCount() != 0) continue;
+            if (m.getDeclaringClass() == Object.class) continue;
+            if (m.getReturnType() == void.class) continue;
+            try {
+                m.setAccessible(true);
+                Object value = m.invoke(obj);
+                log(indent + m.getName() + "() = " + value);
+            } catch (Exception e) {
+                log(indent + m.getName() + "() lanzo: " + e.getMessage());
             }
         }
     }
